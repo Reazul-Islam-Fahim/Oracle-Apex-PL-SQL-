@@ -1,0 +1,51 @@
+CREATE OR REPLACE PACKAGE USER_AUTH_IP
+AS
+    FUNCTION CUSTOM_AUTH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+        RETURN BOOLEAN;
+
+    FUNCTION CUSTOM_HASH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+        RETURN VARCHAR2;
+END;
+
+CREATE OR REPLACE PACKAGE BODY USER_AUTH_IP AS FUNCTION CUSTOM_AUTH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+                   RETURN BOOLEAN
+                IS
+                   L_PASSWORD          VARCHAR2 (4000);
+                   L_STORED_PASSWORD   VARCHAR2 (4000);
+                   v_Time VARCHAR2 (6);
+                   v_ADDR VARCHAR2 (100);
+                   v_LOGIN_ID VARCHAR2 (100);
+                BEGIN
+                  IF P_USERNAME IS NULL AND P_PASSWORD IS NULL THEN
+                     APEX_UTIL.Set_Session_State('LOGIN_MESSAGE','Please enter Username & password.');
+                     RETURN FALSE;      END IF;
+                 SELECT
+            NVL(ROUND(TO_NUMBER(TO_CHAR(MAX(SESSION_IDLE_TIMEOUT_ON),'SSSSS')/60)),0) - ROUND( TO_NUMBER(TO_CHAR(SYSDATE,'SSSSS')/60)) INTO v_Time
+                FROM apex_workspace_sessions WHERE USER_NAME=(SELECT DISTINCT USER_NAME FROM apex_workspace_sessions WHERE USER_NAME=UPPER(P_USERNAME));
+                       IF v_Time > 1  THEN
+                       SELECT REMOTE_ADDR INTO v_ADDR  FROM apex_workspace_sessions WHERE USER_NAME=UPPER(P_USERNAME) AND ROWNUM=1;
+                       ELSE NULL;
+                       END IF;
+                       SELECT PIN
+                        INTO L_STORED_PASSWORD
+                         Return False;     END If;
+
+                   IF L_PASSWORD                     = L_STORED_PASSWORD
+                   THEN
+                     insert into USERS_LOG (LOG_ID,IP_ADDRESS,LOGIN_USER,LOGIN_TIME)
+                RETURN TRUE;
+                END IF;
+                END;
+
+FUNCTION CUSTOM_HASH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+    RETURN VARCHAR2
+IS
+    L_PASSWORD   VARCHAR2 (4000);
+    L_SALT       VARCHAR2 (4000) := 'D9GE4CORSJZVKADPOJ5C1PERC704WB';
+BEGIN
+    L_PASSWORD :=
+        UTL_RAW.CAST_TO_RAW (
+            DBMS_OBFUSCATION_TOOLKIT.MD5 (INPUT_STRING => P_PASSWORD)) RETURN       L_PASSWORD;
+END;
+
+                END;
