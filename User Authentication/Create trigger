@@ -1,0 +1,62 @@
+CREATE OR REPLACE EDITIONABLE TRIGGER  "AUTO_USER_GROUP_MY_STOCK" 
+              after INSERT
+              ON MY_USERS   REFERENCING NEW AS NEW OLD AS OLD
+              FOR EACH ROW
+            DECLARe
+            begin
+             INSERT INTO USER_GROUP_MY_STOCK (PID, PID_USER, PID_GROUP, IS_ACTIVE, INSERT_BY, INSERT_DATE, UPDATE_BY, UPDATE_DATE)
+            EXCEPTION
+              WHEN OTHERS
+              THEN
+                 RAISE;
+            END;
+            ALTER TRIGGER  "AUTO_USER_GROUP_MY_STOCK" ENABLE
+            CREATE OR REPLACE EDITIONABLE TRIGGER  "BI_MY_USERS" 
+              before insert on "MY_USERS"               
+              for each row  
+            begin   
+              if :NEW."USER_ID" is null then 
+                select "MY_USERS_SEQ".nextval into :NEW."USER_ID" from sys.dual; 
+              end if; 
+            end; 
+            ALTER TRIGGER  "BI_MY_USERS" ENABLE
+            CREATE OR REPLACE EDITIONABLE TRIGGER  "LOGIN_ID_ACL_USER" 
+            BEFORE INSERT OR UPDATE of USER_ID
+            ON MY_USERS 
+            REFERENCING NEW AS New OLD AS Old
+            FOR EACH ROW
+            DECLARE
+            BEGIN
+            :NEW.USER_ID := lower(:NEW.USER_ID);
+               EXCEPTION
+                 WHEN OTHERS THEN
+                   -- Consider logging the error and then re-raise
+                   RAISE;
+            END ;
+            ALTER TRIGGER  "LOGIN_ID_ACL_USER" ENABLE
+
+            CREATE OR REPLACE EDITIONABLE TRIGGER  "PIN_MY_USER" 
+            BEFORE INSERT OR UPDATE of PIN 
+            ON MY_USERS
+            DECLARE
+            BEGIN
+            :new.PIN:=USER_AUTH_IP.CUSTOM_HASH ( :new.USER_ID, :new.PIN); 
+            IF INSERTING
+              THEN
+                 :NEW.ADDED_DATE := SYSDATE;
+              END IF;
+               EXCEPTION
+                 WHEN OTHERS THEN
+                   RAISE;
+            END ;
+            ALTER TRIGGER  "PIN_MY_USER" ENABLE
+            ===========
+            CREATE OR REPLACE EDITIONABLE TRIGGER  "USER_UPDATE_LOGS" 
+              before insert or update on USERS_LOG 
+              for each row 
+            begin 
+              if :new.LOG_ID is null then 
+                :new.LOG_ID := to_number(sys_guid(), 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'); 
+              end if; 
+            end user_update_logs;
+            ALTER TRIGGER  "USER_UPDATE_LOGS" ENABLE
