@@ -1,0 +1,74 @@
+2nd Pakge............................
+
+
+CREATE OR REPLACE PACKAGE "ACL"
+AS
+    FUNCTION CUSTOM_AUTH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+        RETURN BOOLEAN;
+
+    FUNCTION CUSTOM_HASH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+        RETURN VARCHAR2;
+END;
+
+            ====================================================
+
+CREATE OR REPLACE PACKAGE BODY "ACL"
+AS
+    FUNCTION CUSTOM_AUTH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+        RETURN BOOLEAN
+    IS
+        L_PASSWORD          VARCHAR2 (4000);
+        L_STORED_PASSWORD   VARCHAR2 (4000);
+    BEGIN
+        SELECT PIN
+          INTO L_STORED_PASSWORD
+          FROM MY_USERS
+         WHERE     is_active = '1'
+               AND LOWER (USERNAME) = LOWER (P_USERNAME)
+               AND ROWNUM <= 1;
+
+        L_PASSWORD := CUSTOM_HASH (P_USERNAME, P_PASSWORD);
+
+        IF L_PASSWORD = L_STORED_PASSWORD
+        THEN
+            INSERT INTO USERS_LOG (LOG_ID,
+                                   IP_ADDRESS,
+                                   LOGIN_USER,
+                                   LOGIN_TIME)                                                               RETURN           TRUE        ;
+ELSE
+                INSERT INTO e_log (pid, msg)
+                         VALUES (
+                                    (SELECT NVL (MAX (pid), 0) + 1 FROM e_log),
+                                       'not match - user: '
+                                    || P_USERNAME
+                                    || '   pass: '
+                                    || P_PASSWORD);
+
+                RETURN FALSE;
+        END IF;
+    EXCEPTION
+        WHEN NO_DATA_FOUND
+        THEN
+            INSERT INTO e_log (pid, msg)
+                     VALUES (
+                                (SELECT NVL (MAX (pid), 0) + 1 FROM e_log),
+                                   'No User Found - user: '
+                                || P_USERNAME
+                                || '   pass: '
+                                || P_PASSWORD);
+
+            RETURN FALSE;
+    END;
+
+    FUNCTION CUSTOM_HASH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+        RETURN VARCHAR2
+    IS
+        L_PASSWORD   VARCHAR2 (4000);
+        L_SALT       VARCHAR2 (4000) := 'D9GE4CORSJZVKADPOJ5C1PERC704WB';
+    BEGIN
+        L_PASSWORD :=
+            UTL_RAW.CAST_TO_RAW (
+                DBMS_OBFUSCATION_TOOLKIT.MD5 (INPUT_STRING => P_PASSWORD));
+        RETURN L_PASSWORD;
+    END;
+END;
