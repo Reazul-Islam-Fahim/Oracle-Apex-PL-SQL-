@@ -1,0 +1,19 @@
+select LEVEL "level",
+    NAME  "label",
+    decode(connect_by_isleaf,0, '','f?p=&APP_ID.:'||TO_CHAR(PAGE_NUMBER)||':&SESSION.::NO:::') AS "target" ,
+    NAME AS "is_current",
+    decode(nvl(PRV_ICON_IMG,'A'),'A','',PRV_ICON_IMG)  "image"
+    from menu
+WHERE STATUS = 1
+and app_id = 101
+and ID IN (SELECT menu_id
+        FROM menu_role
+        WHERe role_id IN (SELECT user_type
+                            FROM my_users
+                            WHERE STATUS = 1
+                            and UPPER (username) = upper(:APP_USER)))
+CONNECT BY PRIOR ID = parent_id
+START WITH parent_id IS NULL
+connect by
+prior id = PARENT_ID 
+order siblings by MENU_SL
